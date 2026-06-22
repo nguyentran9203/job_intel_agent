@@ -14,8 +14,27 @@
 
 import 'dotenv/config';
 import http from 'http';
+import fs   from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { computeTrends } from './aggregate.js';
 import { getAllJobs, getJobCount, getRecentRuns } from './db.js';
+
+const __dirname  = path.dirname(fileURLToPath(import.meta.url));
+const STATIC_DIR = path.join(__dirname, '..', 'dashboard', 'dist');
+const HAS_STATIC = fs.existsSync(STATIC_DIR);
+
+const MIME = {
+  '.html': 'text/html',
+  '.js':   'application/javascript',
+  '.mjs':  'application/javascript',
+  '.css':  'text/css',
+  '.svg':  'image/svg+xml',
+  '.ico':  'image/x-icon',
+  '.json': 'application/json',
+  '.png':  'image/png',
+  '.woff2':'font/woff2',
+};
 
 const PORT = parseInt(process.env.SERVER_PORT ?? '3001', 10);
 
@@ -58,6 +77,8 @@ const server = http.createServer((req, res) => {
       json(res, getRecentRuns(50));
     } else if (url.pathname === '/api/health') {
       json(res, { ok: true, jobs: getJobCount(), ts: new Date().toISOString() });
+    } else if (HAS_STATIC) {
+      serveStatic(url.pathname, res);
     } else {
       res.writeHead(404);
       res.end(JSON.stringify({ error: 'Not found' }));
@@ -72,6 +93,25 @@ const server = http.createServer((req, res) => {
 function json(res, data) {
   res.writeHead(200, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify(data));
+}
+
+function serveStatic(pathname, res) {
+  let filePath = path.join(STATIC_DIR, pathname);
+
+  if (!filePath.startsWith(STATIC_DIR)) {
+    res.writeHead(403);
+    res.end('Forbidden');
+    return;
+  }
+
+  if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+    filePath = path.join(STATIC_DIR, 'index.html');
+  }
+
+  const ext  = path.extname(filePath);
+  const mime = MIME[ext] ?? 'application/octet-stream';
+  res.writeHead(200, { 'Content-Type': mime });
+  fs.createReadStream(filePath).pipe(res);
 }
 
 server.listen(PORT, () => {
