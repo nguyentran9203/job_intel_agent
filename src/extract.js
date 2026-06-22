@@ -10,7 +10,11 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+let _client = null;
+function getClient() {
+  if (!_client) _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  return _client;
+}
 
 const SYSTEM_PROMPT = `You are a job data extraction agent specialising in software engineering roles.
 
@@ -49,7 +53,7 @@ Description:
 ${truncate(job.description_raw ?? '', 4000)}`;
 
   try {
-    const response = await client.messages.create({
+    const response = await getClient().messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 600,
       system: SYSTEM_PROMPT,
