@@ -1,0 +1,20 @@
+{
+  "name": "eu-job-intel-agent",
+  "version": "1.0.0",
+  "description": "EU frontend job market intelligence agent",
+  "type": "module",
+  "scripts": {
+    "pipeline": "node src/pipeline.js",
+    "dashboard": "cd dashboard && npm run dev"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.36.3",
+    "better-sqlite3": "^11.3.0",
+    "node-fetch": "^3.3.2",
+    "nodemailer": "^6.9.14",
+    "p-limit": "^6.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

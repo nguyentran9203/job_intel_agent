@@ -1,0 +1,66 @@
+# .github/workflows/daily-pipeline.yml
+#
+# Runs the job intel pipeline every day at 08:00 UTC via GitHub Actions.
+# No server needed — just push this repo to GitHub and add your secrets.
+#
+# Required secrets (Settings → Secrets → Actions):
+#   ANTHROPIC_API_KEY   — your Claude API key
+#
+# Optional secrets (for email digest):
+#   EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS, EMAIL_TO
+#
+# The SQLite database persists between runs via GitHub Actions cache.
+# For a production setup with multiple machines, swap db.js for Supabase/PlanetScale.
+
+name: Daily Job Intel Pipeline
+
+on:
+  schedule:
+    - cron: '0 8 * * *'   # Every day at 08:00 UTC
+  workflow_dispatch:       # Manual trigger from GitHub UI
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Restore SQLite database
+        uses: actions/cache@v4
+        with:
+          path: jobs.db
+          key: jobs-db-${{ github.run_number }}
+          restore-keys: |
+            jobs-db-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run pipeline
+        env:
+          ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
+          GREENHOUSE_SLUGS:    ${{ secrets.GREENHOUSE_SLUGS }}
+          LEVER_SLUGS:         ${{ secrets.LEVER_SLUGS }}
+          EMAIL_ENABLED:       ${{ secrets.EMAIL_ENABLED }}
+          EMAIL_HOST:          ${{ secrets.EMAIL_HOST }}
+          EMAIL_PORT:          ${{ secrets.EMAIL_PORT }}
+          EMAIL_USER:          ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS:          ${{ secrets.EMAIL_PASS }}
+          EMAIL_TO:            ${{ secrets.EMAIL_TO }}
+          DB_PATH:             ./jobs.db
+          MAX_JOBS_PER_RUN:    '50'
+          LLM_CONCURRENCY:     '3'
+        run: node src/pipeline.js
+
+      - name: Upload database artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jobs-db-${{ github.run_number }}
+          path: jobs.db
+          retention-days: 90
