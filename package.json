@@ -7,7 +7,7 @@
     "build":    "cd dashboard && npm install && npm run build",
     "start":    "node src/server.js",
     "pipeline": "node src/pipeline.js",
-    "dev:api":  "node src/server.js",
+    "dev":      "cd dashboard && npm install && npm run dev",
     "dev:ui":   "cd dashboard && npm run dev"
   },
   "dependencies": {
